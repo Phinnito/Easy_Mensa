@@ -44,7 +44,7 @@ if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
   while IFS= read -r OLD_CODESPACE; do
     if [[ -n "$OLD_CODESPACE" && "$OLD_CODESPACE" != "null" ]]; then
       echo "   停止：$OLD_CODESPACE"
-      gh codespace stop -c "$OLD_CODESPACE" >/dev/null 2>&1 || true
+      gh api -X POST "user/codespaces/${OLD_CODESPACE}/stop" >/dev/null 2>&1 || true
     fi
   done < <(
     gh codespace list -R "$REPO" --json name \
@@ -104,48 +104,24 @@ for attempt in {1..36}; do
   if (( attempt % 4 == 0 )); then
     echo "   当前状态：${STATE:-启动中} ..."
   fi
+
   sleep 5
 done
 
 if [[ "$READY" -ne 1 ]]; then
   echo "❌ Codespace 等待超过 3 分钟仍未就绪。"
-  echo "最近日志："
-  gh codespace logs -c "$CODESPACE" 2>/dev/null | tail -n 40 || true
+  echo "请到 GitHub → Code → Codespaces 检查 EasyMensa-v3。"
   exit 1
 fi
 
-echo "🍳 云端正在自动启动 ChefHuang / Chaetzli ..."
-URL=""
-for attempt in {1..45}; do
-  URL="$(
-    gh codespace ports -c "$CODESPACE" \
-      --json sourcePort,browseUrl \
-      --jq ".[] | select(.sourcePort == ${PORT}) | .browseUrl" 2>/dev/null \
-      | head -n 1
-  )"
+# Streamlit apps are started automatically by devcontainer postStartCommand.
+# Codespaces forwarded-port URLs use a deterministic format.
+echo "🍳 云端环境已就绪，正在打开 ${LABEL} ..."
+sleep 8
 
-  if [[ -n "$URL" && "$URL" != "null" ]]; then
-    break
-  fi
+URL="https://${CODESPACE}-${PORT}.app.github.dev"
 
-  if (( attempt % 10 == 0 )); then
-    echo "   还在准备网页（端口 ${PORT}）..."
-  fi
-  sleep 2
-done
-
-if [[ -z "$URL" || "$URL" == "null" ]]; then
-  echo "❌ Codespace 已启动，但网页端口 ${PORT} 没有出现。"
-  echo "这通常表示 devcontainer 的自动启动命令失败。"
-  echo
-  echo "最近 Codespace 日志："
-  gh codespace logs -c "$CODESPACE" 2>/dev/null | tail -n 60 || true
-  echo
-  echo "可在 GitHub → Code → Codespaces 中打开 ${CODESPACE} 检查 Terminal。"
-  exit 1
-fi
-
-echo "✅ ${LABEL} 已启动"
+echo "✅ ${LABEL}"
 echo "🌐 ${URL}"
 
 if command -v open >/dev/null 2>&1; then
