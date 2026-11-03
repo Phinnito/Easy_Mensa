@@ -5,7 +5,7 @@ MODE="${1:-}"
 REPO="Phinnito/Easy_Mensa"
 BRANCH="main"
 DEVCONTAINER=".devcontainer/devcontainer.json"
-CODESPACE_DISPLAY_NAME="EasyMensa-v3"
+CODESPACE_DISPLAY_NAME="EasyMensa-v4"
 
 if [[ "$MODE" != "admin" && "$MODE" != "user" ]]; then
   echo "Usage: remote_launcher.sh {admin|user}"
@@ -39,7 +39,7 @@ CODESPACE="$(
 )"
 
 if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
-  echo "🧹 正在停止这个仓库之前留下的旧 Codespace..."
+  echo "🧹 正在停止 Easy_Mensa 的旧云端环境..."
 
   while IFS= read -r OLD_CODESPACE; do
     if [[ -n "$OLD_CODESPACE" && "$OLD_CODESPACE" != "null" ]]; then
@@ -53,7 +53,7 @@ if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
 
   sleep 3
 
-  echo "☁️ 正在创建唯一的 Easy_Mensa 云端环境..."
+  echo "☁️ 正在创建 Easy_Mensa 云端环境..."
 
   MACHINE="$(
     gh api "repos/${REPO}/codespaces/machines?ref=${BRANCH}" \
@@ -91,7 +91,7 @@ fi
 
 echo "⏳ 正在等待云端环境就绪..."
 READY=0
-for attempt in {1..36}; do
+for attempt in {1..48}; do
   STATE="$(
     gh api "user/codespaces/${CODESPACE}" --jq '.state' 2>/dev/null || true
   )"
@@ -104,24 +104,47 @@ for attempt in {1..36}; do
   if (( attempt % 4 == 0 )); then
     echo "   当前状态：${STATE:-启动中} ..."
   fi
-
   sleep 5
 done
 
 if [[ "$READY" -ne 1 ]]; then
-  echo "❌ Codespace 等待超过 3 分钟仍未就绪。"
-  echo "请到 GitHub → Code → Codespaces 检查 EasyMensa-v3。"
+  echo "❌ Codespace 等待超过 4 分钟仍未就绪。"
   exit 1
 fi
 
-# Streamlit apps are started automatically by devcontainer postStartCommand.
-# Codespaces forwarded-port URLs use a deterministic format.
-echo "🍳 云端环境已就绪，正在打开 ${LABEL} ..."
-sleep 8
-
 URL="https://${CODESPACE}-${PORT}.app.github.dev"
 
-echo "✅ ${LABEL}"
+echo "🍳 云端正在准备 ${LABEL} ..."
+WEB_READY=0
+for attempt in {1..60}; do
+  HTTP_CODE="$(
+    curl -L -sS -o /dev/null \
+      --connect-timeout 4 \
+      --max-time 8 \
+      -w '%{http_code}' \
+      "$URL" 2>/dev/null || true
+  )"
+
+  # 404 means the forwarded port does not exist yet.
+  # Any real HTTP/auth response means the port route now exists.
+  if [[ -n "$HTTP_CODE" && "$HTTP_CODE" != "000" && "$HTTP_CODE" != "404" ]]; then
+    WEB_READY=1
+    break
+  fi
+
+  if (( attempt % 10 == 0 )); then
+    echo "   网页还在启动（HTTP ${HTTP_CODE:-000}）..."
+  fi
+  sleep 2
+done
+
+if [[ "$WEB_READY" -ne 1 ]]; then
+  echo "❌ ${LABEL} 的网页仍未启动成功（端口 ${PORT}）。"
+  echo "请在 GitHub → Code → Codespaces → EasyMensa-v4 中打开一次，查看 Creation Log。"
+  exit 1
+fi
+
+echo "✅ ${LABEL} 已启动"
 echo "🌐 ${URL}"
 
 if command -v open >/dev/null 2>&1; then
