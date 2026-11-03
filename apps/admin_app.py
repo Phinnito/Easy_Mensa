@@ -9,9 +9,16 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.models.knowledge import IngredientKnowledge
 from src.models.recipe import Ingredient, Recipe, Substitute
-from src.services.catalog_service import get_ingredient_options
+from src.services.catalog_service import get_ingredient_options, get_ingredient_usage_details
 from src.services.git_service import publish_changes
+from src.services.knowledge_service import (
+    get_knowledge_for_ingredient,
+    knowledge_id_for_ingredient,
+    knowledge_map,
+    save_knowledge,
+)
 from src.services.storage_service import (
     delete_recipe,
     get_recipe,
@@ -41,6 +48,8 @@ def init_state() -> None:
     st.session_state.setdefault("selected_recipe_id", None)
     st.session_state.setdefault("editor_nonce", 0)
     st.session_state.setdefault("delete_pending", None)
+    st.session_state.setdefault("selected_knowledge_ingredient", None)
+    st.session_state.setdefault("knowledge_nonce", 0)
 
 
 def go(page: str) -> None:
@@ -59,6 +68,13 @@ def edit_recipe(recipe_id: str) -> None:
     st.session_state["selected_recipe_id"] = recipe_id
     st.session_state["editor_nonce"] += 1
     st.session_state["admin_page"] = "editor"
+    st.rerun()
+
+
+def edit_knowledge(ingredient: str) -> None:
+    st.session_state["selected_knowledge_ingredient"] = ingredient
+    st.session_state["knowledge_nonce"] += 1
+    st.session_state["admin_page"] = "knowledge_editor"
     st.rerun()
 
 
@@ -95,7 +111,9 @@ def sidebar() -> None:
         go("list")
     if st.sidebar.button("➕ 新增菜单", use_container_width=True):
         new_recipe()
-    if st.sidebar.button("📚 数据规则", use_container_width=True):
+    if st.sidebar.button("📚 食材知识库", use_container_width=True):
+        go("knowledge")
+    if st.sidebar.button("📐 数据规则", use_container_width=True):
         go("help")
 
 
@@ -548,6 +566,240 @@ def editor_page() -> None:
             st.warning(f"菜谱已保存，但 GitHub 自动同步失败：{message}")
 
 
+def knowledge_list_page() -> None:
+    usage = get_ingredient_usage_details()
+    existing = knowledge_map()
+
+    st.title("📚 食材知识库")
+    st.caption("食材名单自动来自所有菜谱中的主食材和替代食材，不需要另外维护。")
+
+    completed = sum(1 for name in usage if name.casefold() in existing)
+    m1, m2, m3 = st.columns(3)
+    m1.metric("食材库", len(usage))
+    m2.metric("已完成教学", completed)
+    m3.metric("待编写", max(0, len(usage) - completed))
+
+    a, b = st.columns([3, 1])
+    with a:
+        search = st.text_input(
+            "搜索食材知识库",
+            placeholder="搜索食材，例如：豆腐、郫县豆瓣",
+            label_visibility="collapsed",
+        )
+    with b:
+        status = st.selectbox(
+            "状态",
+            ["全部", "待编写", "已完成"],
+            label_visibility="collapsed",
+        )
+
+    rows = []
+    for name, info in usage.items():
+        item = existing.get(name.casefold())
+        done = item is not None
+
+        if search.strip() and search.strip().casefold() not in name.casefold():
+            continue
+        if status == "待编写" and done:
+            continue
+        if status == "已完成" and not done:
+            continue
+
+        rows.append((name, info, item))
+
+    rows.sort(
+        key=lambda row: (
+            0 if row[2] is None else 1,
+            -row[1]["recipes"],
+            row[0].casefold(),
+        )
+    )
+
+    if not rows:
+        st.info("没有符合条件的食材。")
+        return
+
+    for index, (name, info, item) in enumerate(rows):
+        with st.container(border=True):
+            c1, c2 = st.columns([5, 1.2])
+            with c1:
+                status_label = "✅ 已有教学" if item else "📝 待编写"
+                st.subheader(f"{name} · {status_label}")
+                st.caption(
+                    f"出现在 {info['recipes']} 道菜中 · "
+                    f"主食材 {info['primary']} 次 · 替代食材 {info['substitute']} 次"
+                )
+                if item and item.summary:
+                    st.write(item.summary)
+
+            with c2:
+                label = "✏️ 编辑" if item else "📝 编写"
+                if st.button(
+                    label,
+                    key=f"knowledge_{index}",
+                    use_container_width=True,
+                    type="primary" if not item else "secondary",
+                ):
+                    edit_knowledge(name)
+
+
+def knowledge_editor_page() -> None:
+    ingredient = st.session_state.get("selected_knowledge_ingredient")
+    if not ingredient:
+        go("knowledge")
+        return
+
+    existing = get_knowledge_for_ingredient(ingredient)
+    token = f"knowledge_{st.session_state['knowledge_nonce']}"
+    usage = get_ingredient_usage_details().get(
+        ingredient,
+        {"recipes": 0, "primary": 0, "substitute": 0, "total": 0},
+    )
+
+    st.title(f"📚 {ingredient}")
+    st.caption(
+        f"来自自动食材库 · 出现在 {usage['recipes']} 道菜中 · "
+        f"主食材 {usage['primary']} 次 · 替代食材 {usage['substitute']} 次"
+    )
+
+    if st.button("← 返回食材知识库"):
+        go("knowledge")
+
+    recipes = []
+    target = ingredient.casefold()
+    for recipe in list_recipes():
+        found = False
+        for recipe_ingredient in recipe.ingredients:
+            if recipe_ingredient.name.strip().casefold() == target:
+                found = True
+                break
+            if any(
+                sub.name.strip().casefold() == target
+                for sub in recipe_ingredient.substitutes
+            ):
+                found = True
+                break
+        if found:
+            recipes.append(recipe.name)
+
+    if recipes:
+        st.info("相关菜单：" + "、".join(sorted(set(recipes))))
+
+    aliases = st.text_input(
+        "别名",
+        value="、".join(existing.aliases) if existing else "",
+        placeholder="例如：豆瓣酱、Pixian Douban（用顿号或逗号分隔）",
+        key=f"aliases_{token}",
+    )
+
+    summary = st.text_area(
+        "一句话介绍",
+        value=existing.summary if existing else "",
+        placeholder="它是什么？尽量用一句话让不会做饭的人也能看懂。",
+        height=90,
+        key=f"summary_{token}",
+    )
+
+    function = st.text_area(
+        "它在做饭里是干什么的？",
+        value=existing.function if existing else "",
+        placeholder="例如：提供咸味、辣味、发酵香气和红油。",
+        height=110,
+        key=f"function_{token}",
+    )
+
+    how_to_use = st.text_area(
+        "怎么使用？",
+        value=existing.how_to_use if existing else "",
+        placeholder="什么时候下锅、用多大火、做到什么程度。",
+        height=140,
+        key=f"use_{token}",
+    )
+
+    how_to_choose = st.text_area(
+        "买的时候怎么看？",
+        value=existing.how_to_choose if existing else "",
+        placeholder="可选。适合写超市购买、品牌、外观或包装判断。",
+        height=110,
+        key=f"choose_{token}",
+    )
+
+    storage = st.text_area(
+        "怎么保存？",
+        value=existing.storage if existing else "",
+        placeholder="可选。开封前后、冷藏、保质等。",
+        height=90,
+        key=f"storage_{token}",
+    )
+
+    mistakes = st.text_area(
+        "常见错误（一行一条）",
+        value="\n".join(existing.mistakes) if existing else "",
+        placeholder="火太大容易炒糊\n放得太多容易过咸",
+        height=130,
+        key=f"mistakes_{token}",
+    )
+
+    tips = st.text_area(
+        "🐯 黄师傅提醒（一行一条）",
+        value="\n".join(existing.tips) if existing else "",
+        placeholder="炒的时候手不要停\n看到油开始变红基本就可以了",
+        height=130,
+        key=f"tips_{token}",
+    )
+
+    if st.button(
+        "💾 保存并发布知识",
+        type="primary",
+        use_container_width=True,
+        key=f"save_{token}",
+    ):
+        normalized_aliases = aliases.replace("，", "、").replace(",", "、")
+        alias_list = [
+            value.strip()
+            for value in normalized_aliases.split("、")
+            if value.strip()
+        ]
+        mistake_list = [
+            value.strip()
+            for value in mistakes.splitlines()
+            if value.strip()
+        ]
+        tip_list = [
+            value.strip()
+            for value in tips.splitlines()
+            if value.strip()
+        ]
+
+        item = IngredientKnowledge(
+            id=existing.id if existing else knowledge_id_for_ingredient(ingredient),
+            ingredient=ingredient,
+            aliases=alias_list,
+            summary=summary.strip(),
+            function=function.strip(),
+            how_to_use=how_to_use.strip(),
+            how_to_choose=how_to_choose.strip(),
+            storage=storage.strip(),
+            mistakes=mistake_list,
+            tips=tip_list,
+        )
+        save_knowledge(item)
+
+        action = "Update" if existing else "Add"
+        success, message = publish_changes(
+            f"{action} ingredient knowledge: {ingredient}"
+        )
+
+        if success:
+            st.session_state["selected_knowledge_ingredient"] = None
+            st.session_state["admin_page"] = "knowledge"
+            st.session_state["knowledge_nonce"] += 1
+            st.success(f"✅ {ingredient} 的知识已保存。{message}")
+            st.rerun()
+        else:
+            st.warning(f"知识已保存，但 GitHub 自动同步失败：{message}")
+
+
 def help_page() -> None:
     st.title("📚 数据规则")
     st.markdown(
@@ -578,5 +830,9 @@ if page == "list":
     recipe_list_page()
 elif page == "editor":
     editor_page()
+elif page == "knowledge":
+    knowledge_list_page()
+elif page == "knowledge_editor":
+    knowledge_editor_page()
 else:
     help_page()
