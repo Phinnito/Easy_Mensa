@@ -21,6 +21,7 @@
     <button class="tab active" data-view="recipes">📖 所有菜单</button>
     <button class="tab" data-view="pantry">🥬 我有什么</button>
     <button class="tab" data-view="roll">🎲 Roll 菜谱</button>
+    <button class="tab" data-view="knowledge">📚 厨房小课堂</button>
   </nav>
 
   <main>
@@ -47,6 +48,15 @@
         </div>
       </div>
       <div id="match-grid" class="recipe-grid"></div>
+    </section>
+
+    <section id="knowledge-view" class="view">
+      <div class="panel knowledge-intro">
+        <h2>📚 厨房小课堂</h2>
+        <p class="muted">黄师傅把菜谱里出现过的食材慢慢讲明白。不会做饭也没关系，点进去看它是什么、怎么用、怎么买。</p>
+        <input id="knowledge-search" type="search" placeholder="搜索食材，例如：豆腐、郫县豆瓣、生抽">
+      </div>
+      <div id="knowledge-grid" class="knowledge-grid"></div>
     </section>
 
     <section id="roll-view" class="view">
