@@ -126,7 +126,8 @@ for attempt in {1..60}; do
   )"
 
   # 404 means the forwarded port does not exist yet.
-  # Any real HTTP/auth response means the port route now exists.
+  # 401 means the private port exists but browser authentication is required.
+  # Any other real HTTP response also means the route exists.
   if [[ -n "$HTTP_CODE" && "$HTTP_CODE" != "000" && "$HTTP_CODE" != "404" ]]; then
     WEB_READY=1
     break
@@ -148,7 +149,13 @@ echo "✅ ${LABEL} 已启动"
 echo "🌐 ${URL}"
 
 if command -v open >/dev/null 2>&1; then
+  if [[ "$HTTP_CODE" == "401" ]]; then
+    echo "🔐 这是 GitHub 私有端口，浏览器需要先完成 GitHub 身份认证。"
+    echo "   我会先打开 GitHub Codespaces 页面，再打开 ${LABEL}。"
+    open "https://github.com/codespaces"
+    sleep 3
+  fi
   open "$URL"
 else
-  echo "请在浏览器打开上面的地址。"
+  echo "请先登录 GitHub，然后在浏览器打开上面的地址。"
 fi
