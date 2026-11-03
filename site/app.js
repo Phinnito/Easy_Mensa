@@ -356,7 +356,7 @@ function openRecipe(recipeId) {
     '</div>';
 
   const dialog = document.getElementById("recipe-dialog");
-  dialog.showModal();
+  if (!dialog.open) dialog.showModal();
 
   dialog.querySelectorAll(".knowledge-inline").forEach(button => {
     button.addEventListener("click", event => {
