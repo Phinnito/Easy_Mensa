@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#fffaf3">
+  <title>小猫食堂 · Chaetzli</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <div class="eyebrow">CHAETZLI · 小猫食堂</div>
+      <h1>今天吃什么？</h1>
+      <p>黄师傅的菜单，给不会做饭的小猫也能看懂。</p>
+    </div>
+    <div class="cat">🐱</div>
+  </header>
+
+  <nav class="tabs" aria-label="页面导航">
+    <button class="tab active" data-view="recipes">📖 所有菜单</button>
+    <button class="tab" data-view="pantry">🥬 我有什么</button>
+    <button class="tab" data-view="roll">🎲 Roll 菜谱</button>
+  </nav>
+
+  <main>
+    <section id="recipes-view" class="view active">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="搜索菜名或食材">
+        <select id="cuisine-filter">
+          <option value="">全部菜系</option>
+        </select>
+      </div>
+      <div id="recipe-grid" class="recipe-grid"></div>
+    </section>
+
+    <section id="pantry-view" class="view">
+      <div class="panel">
+        <h2>家里有什么？</h2>
+        <p class="muted">点选现有食材，我会优先推荐能直接做或可以替换后做的菜。</p>
+        <input id="ingredient-search" type="search" placeholder="搜索食材，例如：豆腐、牛奶、土豆">
+        <div id="ingredient-cloud" class="ingredient-cloud"></div>
+        <div class="selected-row">
+          <strong>已选择：</strong>
+          <span id="selected-summary">还没有选择食材</span>
+          <button id="clear-pantry" class="link-button">清空</button>
+        </div>
+      </div>
+      <div id="match-grid" class="recipe-grid"></div>
+    </section>
+
+    <section id="roll-view" class="view">
+      <div class="roll-card">
+        <div class="roll-cat">🎲🐯</div>
+        <h2>今天让黄师傅替你决定</h2>
+        <p class="muted">先选一个场景，再 Roll 一道菜单。</p>
+        <div id="scenario-pills" class="scenario-pills"></div>
+        <button id="roll-button" class="primary-button">🎲 Roll 一道菜</button>
+        <div id="roll-result"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="recipe-dialog">
+    <button id="dialog-close" class="dialog-close" aria-label="关闭">×</button>
+    <div id="dialog-content"></div>
+  </dialog>
+
+  <footer>
+    <span>🐱 Chaetzli</span>
+    <span>菜单由黄师傅更新</span>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
