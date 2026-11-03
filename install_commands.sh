@@ -20,17 +20,11 @@ cat >> "$ZSHRC" <<'EOF'
 
 # >>> Easy_Mensa commands >>>
 ChefHuang() {
-  gh api \
-    -H "Accept: application/vnd.github.raw+json" \
-    repos/Phinnito/Easy_Mensa/contents/remote_launcher.sh \
-    | bash -s -- admin
+  gh api     -H "Accept: application/vnd.github.raw+json"     repos/Phinnito/Easy_Mensa/contents/remote_launcher.sh     | bash -s -- admin
 }
 
 Chaetzli() {
-  gh api \
-    -H "Accept: application/vnd.github.raw+json" \
-    repos/Phinnito/Easy_Mensa/contents/remote_launcher.sh \
-    | bash -s -- user
+  open "https://phinnito.github.io/Easy_Mensa/"
 }
 # <<< Easy_Mensa commands <<<
 EOF
