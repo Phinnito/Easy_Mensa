@@ -39,3 +39,36 @@ def get_ingredient_recipe_counts() -> dict[str, int]:
         counts.update(seen)
 
     return dict(counts)
+
+
+def get_ingredient_usage_details() -> dict[str, dict[str, int]]:
+    """Usage counts split between primary and substitute appearances."""
+    details: dict[str, dict[str, int]] = {}
+
+    for recipe in list_recipes():
+        seen_in_recipe: set[str] = set()
+
+        for ingredient in recipe.ingredients:
+            name = ingredient.name.strip()
+            entry = details.setdefault(
+                name,
+                {"total": 0, "primary": 0, "substitute": 0, "recipes": 0},
+            )
+            entry["total"] += 1
+            entry["primary"] += 1
+            seen_in_recipe.add(name)
+
+            for substitute in ingredient.substitutes:
+                sub_name = substitute.name.strip()
+                sub_entry = details.setdefault(
+                    sub_name,
+                    {"total": 0, "primary": 0, "substitute": 0, "recipes": 0},
+                )
+                sub_entry["total"] += 1
+                sub_entry["substitute"] += 1
+                seen_in_recipe.add(sub_name)
+
+        for name in seen_in_recipe:
+            details[name]["recipes"] += 1
+
+    return details
