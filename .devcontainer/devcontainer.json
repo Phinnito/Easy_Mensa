@@ -1,7 +1,13 @@
 {
   "name": "Easy_Mensa",
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
+  },
   "postCreateCommand": "pip install -r requirements.txt",
+  "postStartCommand": "bash scripts/start_apps.sh",
   "forwardPorts": [8501, 8502],
   "portsAttributes": {
     "8501": {
