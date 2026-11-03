@@ -31,6 +31,43 @@
   - 可以做但味道会变化
   - 缺少必要食材
 
+
+## 一键终端入口（Mac）
+
+只需要安装一次终端命令。前提是已经安装并登录 GitHub CLI：
+
+```bash
+gh auth status
+```
+
+然后执行：
+
+```bash
+gh api -H "Accept: application/vnd.github.raw+json" \
+  repos/Phinnito/Easy_Mensa/contents/install_commands.sh \
+  | bash
+
+source ~/.zshrc
+```
+
+以后直接：
+
+```bash
+ChefHuang
+```
+
+打开黄师傅录菜后台。
+
+或者：
+
+```bash
+Chaetzli
+```
+
+打开小猫食堂。
+
+这两个命令会自动复用或创建 Easy_Mensa 的 GitHub Codespace，在云端启动 Streamlit，并在 Mac 浏览器中打开对应页面。本地不需要运行 Python。
+
 ## 推荐开发方式：GitHub Codespaces
 
 在 GitHub 仓库页面：
