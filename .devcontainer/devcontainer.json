@@ -3,7 +3,10 @@
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
   "postCreateCommand": "python -m pip install -r requirements.txt",
   "postStartCommand": "python scripts/start_apps.py",
-  "forwardPorts": [8501, 8502],
+  "forwardPorts": [
+    8501,
+    8502
+  ],
   "portsAttributes": {
     "8501": {
       "label": "ChefHuang",
@@ -13,7 +16,7 @@
     "8502": {
       "label": "Chaetzli",
       "onAutoForward": "silent",
-      "visibility": "private"
+      "visibility": "public"
     }
   }
 }
