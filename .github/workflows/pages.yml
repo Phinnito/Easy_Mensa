@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "data/recipes/**"
+      - "data/knowledge/**"
       - "images/recipes/**"
       - "site/**"
       - "scripts/export_static_site.py"
