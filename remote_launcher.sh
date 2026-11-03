@@ -4,6 +4,7 @@ set -euo pipefail
 MODE="${1:-}"
 REPO="Phinnito/Easy_Mensa"
 BRANCH="main"
+DEVCONTAINER=".devcontainer/devcontainer.json"
 
 if [[ "$MODE" != "admin" && "$MODE" != "user" ]]; then
   echo "Usage: remote_launcher.sh {admin|user}"
@@ -41,27 +42,47 @@ CODESPACE="$(
 
 if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
   echo "☁️ 第一次使用：正在为 Easy_Mensa 创建云端环境..."
+
+  MACHINE="$(
+    gh api "repos/${REPO}/codespaces/machines?ref=${BRANCH}" \
+      --jq '.machines | sort_by(.cpus, .memory_in_bytes) | .[0].name' 2>/dev/null || true
+  )"
+
+  if [[ -z "$MACHINE" || "$MACHINE" == "null" ]]; then
+    echo "❌ 无法自动读取 Codespaces 机器类型。"
+    echo "请先运行：gh auth refresh -h github.com -s codespace"
+    echo "然后再输入：${LABEL}"
+    exit 1
+  fi
+
+  echo "🖥️ 使用最轻量可用机器：${MACHINE}"
+
   CODESPACE="$(
     gh codespace create \
       -R "$REPO" \
       -b "$BRANCH" \
+      --devcontainer-path "$DEVCONTAINER" \
+      --machine "$MACHINE" \
+      --default-permissions \
       -d "EasyMensa" \
       --idle-timeout 30m \
       --retention-period 168h
   )"
 fi
 
-if [[ -z "$CODESPACE" ]]; then
+if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
   echo "❌ 没有找到或创建 Codespace。"
   exit 1
 fi
+
+echo "☁️ 正在云端启动 ${LABEL} ..."
 
 REMOTE_CMD="cd /workspaces/Easy_Mensa && git pull --ff-only >/dev/null 2>&1 || true; pkill -f '[s]treamlit run ${APP}' >/dev/null 2>&1 || true; nohup python -m streamlit run ${APP} --server.address 0.0.0.0 --server.port ${PORT} --server.headless true >${LOG} 2>&1 </dev/null &"
 
 gh codespace ssh -c "$CODESPACE" "bash -lc $(printf '%q' "$REMOTE_CMD")" >/dev/null
 
 URL=""
-for _ in {1..30}; do
+for _ in {1..40}; do
   URL="$(
     gh codespace ports -c "$CODESPACE" \
       --json sourcePort,browseUrl \
