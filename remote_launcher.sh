@@ -112,6 +112,74 @@ if [[ "$READY" -ne 1 ]]; then
   exit 1
 fi
 
+if [[ "$MODE" == "admin" ]]; then
+  LOCAL_PORT="18501"
+  LOCAL_URL="http://127.0.0.1:${LOCAL_PORT}"
+  PID_FILE="/tmp/easymensa-chef-forward.pid"
+  LOG_FILE="/tmp/easymensa-chef-forward.log"
+
+  echo "🔒 正在建立黄师傅后台的本地安全通道..."
+
+  if [[ -f "$PID_FILE" ]]; then
+    OLD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
+    if [[ -n "$OLD_PID" ]] && kill -0 "$OLD_PID" >/dev/null 2>&1; then
+      kill "$OLD_PID" >/dev/null 2>&1 || true
+      sleep 1
+    fi
+    rm -f "$PID_FILE"
+  fi
+
+  # Clean up any older launcher-created forward that may still own the port.
+  pkill -f "gh codespace ports forward 8501:${LOCAL_PORT}" >/dev/null 2>&1 || true
+  sleep 1
+
+  nohup gh codespace ports forward "8501:${LOCAL_PORT}" -c "$CODESPACE" \
+    >"$LOG_FILE" 2>&1 &
+  FORWARD_PID=$!
+  echo "$FORWARD_PID" >"$PID_FILE"
+
+  LOCAL_READY=0
+  for attempt in {1..30}; do
+    HTTP_CODE="$(
+      curl -sS -o /dev/null \
+        --connect-timeout 2 \
+        --max-time 4 \
+        -w '%{http_code}' \
+        "$LOCAL_URL" 2>/dev/null || true
+    )"
+
+    if [[ -n "$HTTP_CODE" && "$HTTP_CODE" != "000" ]]; then
+      LOCAL_READY=1
+      break
+    fi
+
+    if ! kill -0 "$FORWARD_PID" >/dev/null 2>&1; then
+      echo "❌ 本地安全通道启动失败。"
+      cat "$LOG_FILE" 2>/dev/null || true
+      exit 1
+    fi
+
+    sleep 1
+  done
+
+  if [[ "$LOCAL_READY" -ne 1 ]]; then
+    echo "❌ 黄师傅后台没有通过本地安全通道启动。"
+    echo "日志：$LOG_FILE"
+    exit 1
+  fi
+
+  echo "✅ ChefHuang 已启动"
+  echo "🌐 ${LOCAL_URL}"
+  echo "🔒 这个地址只在你自己的电脑上可访问，不会公开到互联网。"
+
+  if command -v open >/dev/null 2>&1; then
+    open "$LOCAL_URL"
+  fi
+
+  exit 0
+fi
+
+# Legacy user-mode fallback. Chaetzli normally opens the public GitHub Pages site directly.
 URL="https://${CODESPACE}-${PORT}.app.github.dev"
 
 echo "🍳 云端正在准备 ${LABEL} ..."
@@ -125,9 +193,6 @@ for attempt in {1..60}; do
       "$URL" 2>/dev/null || true
   )"
 
-  # 404 means the forwarded port does not exist yet.
-  # 401 means the private port exists but browser authentication is required.
-  # Any other real HTTP response also means the route exists.
   if [[ -n "$HTTP_CODE" && "$HTTP_CODE" != "000" && "$HTTP_CODE" != "404" ]]; then
     WEB_READY=1
     break
@@ -141,7 +206,6 @@ done
 
 if [[ "$WEB_READY" -ne 1 ]]; then
   echo "❌ ${LABEL} 的网页仍未启动成功（端口 ${PORT}）。"
-  echo "请在 GitHub → Code → Codespaces → EasyMensa-v6 中打开一次，查看 Creation Log。"
   exit 1
 fi
 
@@ -149,13 +213,5 @@ echo "✅ ${LABEL} 已启动"
 echo "🌐 ${URL}"
 
 if command -v open >/dev/null 2>&1; then
-  if [[ "$HTTP_CODE" == "401" ]]; then
-    echo "🔐 这是 GitHub 私有端口，浏览器需要先完成 GitHub 身份认证。"
-    echo "   我会先打开 GitHub Codespaces 页面，再打开 ${LABEL}。"
-    open "https://github.com/codespaces"
-    sleep 3
-  fi
   open "$URL"
-else
-  echo "请先登录 GitHub，然后在浏览器打开上面的地址。"
 fi
