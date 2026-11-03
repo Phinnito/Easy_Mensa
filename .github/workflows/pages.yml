@@ -4,6 +4,8 @@ on:
   push:
     branches: ["main"]
     paths:
+      - "apps/**"
+      - "src/**"
       - "data/recipes/**"
       - "data/knowledge/**"
       - "images/recipes/**"
@@ -34,6 +36,12 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
+      - name: Validate Python
+        run: python -m compileall -q apps src scripts
+
+      - name: Validate frontend JavaScript
+        run: node --check site/app.js
 
       - name: Export static site
         run: python scripts/export_static_site.py
