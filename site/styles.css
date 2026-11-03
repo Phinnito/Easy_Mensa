@@ -306,3 +306,95 @@ footer {
   .recipe-grid { grid-template-columns: 1fr; }
   main, .tabs, .hero { padding-left: 16px; padding-right: 16px; }
 }
+
+
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.knowledge-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 14px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.knowledge-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(70, 48, 32, .08);
+}
+
+.knowledge-card h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.knowledge-card p {
+  color: var(--muted);
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+
+.knowledge-icon,
+.knowledge-detail-icon {
+  font-size: 38px;
+}
+
+.knowledge-aliases {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.knowledge-inline {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.knowledge-summary {
+  font-size: 17px;
+  line-height: 1.7;
+  background: var(--accent-soft);
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+.knowledge-section p,
+.knowledge-section li {
+  line-height: 1.75;
+}
+
+.related-recipes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.related-recipe-button {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.related-recipe-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .knowledge-grid {
+    grid-template-columns: 1fr;
+  }
+}
