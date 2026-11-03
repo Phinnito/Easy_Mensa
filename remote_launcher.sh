@@ -5,6 +5,7 @@ MODE="${1:-}"
 REPO="Phinnito/Easy_Mensa"
 BRANCH="main"
 DEVCONTAINER=".devcontainer/devcontainer.json"
+CODESPACE_DISPLAY_NAME="EasyMensa-v2"
 
 if [[ "$MODE" != "admin" && "$MODE" != "user" ]]; then
   echo "Usage: remote_launcher.sh {admin|user}"
@@ -22,26 +23,23 @@ if ! gh auth status >/dev/null 2>&1; then
 fi
 
 if [[ "$MODE" == "admin" ]]; then
-  APP="apps/admin_app.py"
   PORT="8501"
   LABEL="ChefHuang"
-  LOG="/tmp/easy_mensa_admin.log"
 else
-  APP="apps/user_app.py"
   PORT="8502"
   LABEL="Chaetzli"
-  LOG="/tmp/easy_mensa_user.log"
 fi
 
 echo "🐱 正在打开 ${LABEL} ..."
 
 CODESPACE="$(
-  gh codespace list -R "$REPO" --json name,lastUsedAt \
-    --jq 'sort_by(.lastUsedAt) | reverse | .[0].name' 2>/dev/null || true
+  gh codespace list -R "$REPO" --json name,displayName,lastUsedAt \
+    --jq "map(select(.displayName == \"${CODESPACE_DISPLAY_NAME}\")) | sort_by(.lastUsedAt) | reverse | .[0].name" \
+    2>/dev/null || true
 )"
 
 if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
-  echo "☁️ 第一次使用：正在为 Easy_Mensa 创建云端环境..."
+  echo "☁️ 第一次使用新版启动器：正在创建 Easy_Mensa 云端环境..."
 
   MACHINE="$(
     gh api "repos/${REPO}/codespaces/machines?ref=${BRANCH}" \
@@ -51,7 +49,6 @@ if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
   if [[ -z "$MACHINE" || "$MACHINE" == "null" ]]; then
     echo "❌ 无法自动读取 Codespaces 机器类型。"
     echo "请先运行：gh auth refresh -h github.com -s codespace"
-    echo "然后再输入：${LABEL}"
     exit 1
   fi
 
@@ -64,10 +61,13 @@ if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
       --devcontainer-path "$DEVCONTAINER" \
       --machine "$MACHINE" \
       --default-permissions \
-      -d "EasyMensa" \
+      -d "$CODESPACE_DISPLAY_NAME" \
       --idle-timeout 30m \
       --retention-period 168h
   )"
+else
+  echo "☁️ 正在唤醒 Easy_Mensa 云端环境..."
+  gh api -X POST "user/codespaces/${CODESPACE}/start" >/dev/null 2>&1 || true
 fi
 
 if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
@@ -75,14 +75,10 @@ if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
   exit 1
 fi
 
-echo "☁️ 正在云端启动 ${LABEL} ..."
-
-REMOTE_CMD="cd /workspaces/Easy_Mensa && git pull --ff-only >/dev/null 2>&1 || true; pkill -f '[s]treamlit run ${APP}' >/dev/null 2>&1 || true; nohup python -m streamlit run ${APP} --server.address 0.0.0.0 --server.port ${PORT} --server.headless true >${LOG} 2>&1 </dev/null &"
-
-gh codespace ssh -c "$CODESPACE" "bash -lc $(printf '%q' "$REMOTE_CMD")" >/dev/null
+echo "🍳 正在等待 ${LABEL} 网页启动..."
 
 URL=""
-for _ in {1..40}; do
+for _ in {1..60}; do
   URL="$(
     gh codespace ports -c "$CODESPACE" \
       --json sourcePort,browseUrl \
@@ -93,7 +89,7 @@ for _ in {1..40}; do
   if [[ -n "$URL" && "$URL" != "null" ]]; then
     break
   fi
-  sleep 1
+  sleep 2
 done
 
 if [[ -z "$URL" || "$URL" == "null" ]]; then
