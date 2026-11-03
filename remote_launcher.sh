@@ -5,7 +5,7 @@ MODE="${1:-}"
 REPO="Phinnito/Easy_Mensa"
 BRANCH="main"
 DEVCONTAINER=".devcontainer/devcontainer.json"
-CODESPACE_DISPLAY_NAME="EasyMensa-v4"
+CODESPACE_DISPLAY_NAME="EasyMensa-v5"
 
 if [[ "$MODE" != "admin" && "$MODE" != "user" ]]; then
   echo "Usage: remote_launcher.sh {admin|user}"
@@ -141,7 +141,7 @@ done
 
 if [[ "$WEB_READY" -ne 1 ]]; then
   echo "❌ ${LABEL} 的网页仍未启动成功（端口 ${PORT}）。"
-  echo "请在 GitHub → Code → Codespaces → EasyMensa-v4 中打开一次，查看 Creation Log。"
+  echo "请在 GitHub → Code → Codespaces → EasyMensa-v5 中打开一次，查看 Creation Log。"
   exit 1
 fi
 
