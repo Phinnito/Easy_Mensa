@@ -39,7 +39,21 @@ CODESPACE="$(
 )"
 
 if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
-  echo "☁️ 第一次使用无 SSH 版本：正在创建 Easy_Mensa 云端环境..."
+  echo "🧹 正在停止这个仓库之前留下的旧 Codespace..."
+
+  while IFS= read -r OLD_CODESPACE; do
+    if [[ -n "$OLD_CODESPACE" && "$OLD_CODESPACE" != "null" ]]; then
+      echo "   停止：$OLD_CODESPACE"
+      gh codespace stop -c "$OLD_CODESPACE" >/dev/null 2>&1 || true
+    fi
+  done < <(
+    gh codespace list -R "$REPO" --json name \
+      --jq '.[].name' 2>/dev/null || true
+  )
+
+  sleep 3
+
+  echo "☁️ 正在创建唯一的 Easy_Mensa 云端环境..."
 
   MACHINE="$(
     gh api "repos/${REPO}/codespaces/machines?ref=${BRANCH}" \
