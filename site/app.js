@@ -1,5 +1,6 @@
 const state = {
   recipes: [],
+  knowledge: [],
   selectedIngredients: new Set(),
   selectedScenario: "",
 };
@@ -35,6 +36,76 @@ function esc(value) {
 function normalize(value) {
   return String(value ?? "").trim().toLocaleLowerCase();
 }
+
+
+
+function findKnowledgeForIngredient(name) {
+  const target = normalize(name);
+  return state.knowledge.find(item =>
+    normalize(item.ingredient) === target ||
+    (item.aliases || []).some(alias => normalize(alias) === target)
+  ) || null;
+}
+
+function relatedRecipesForIngredient(name) {
+  const target = normalize(name);
+
+  return state.recipes.filter(recipe =>
+    (recipe.ingredients || []).some(ingredient =>
+      normalize(ingredient.name) === target ||
+      (ingredient.substitutes || []).some(sub => normalize(sub.name) === target)
+    )
+  );
+}
+
+function knowledgeCardMarkup(item) {
+  const aliases = (item.aliases || []).length
+    ? '<div class="knowledge-aliases">也叫：' + (item.aliases || []).map(esc).join(" · ") + '</div>'
+    : "";
+
+  return (
+    '<article class="knowledge-card" data-knowledge-id="' + esc(item.id) + '">' +
+      '<div class="knowledge-icon">🥬</div>' +
+      '<div>' +
+        '<h3>' + esc(item.ingredient) + '</h3>' +
+        aliases +
+        '<p>' + esc(item.summary || "黄师傅已经给这个食材写了小课堂。") + '</p>' +
+      '</div>' +
+    '</article>'
+  );
+}
+
+function bindKnowledgeCards(container) {
+  container.querySelectorAll(".knowledge-card").forEach(card => {
+    card.addEventListener("click", () => openKnowledge(card.dataset.knowledgeId));
+  });
+}
+
+function renderKnowledge() {
+  const grid = document.getElementById("knowledge-grid");
+  if (!grid) return;
+
+  const query = normalize(document.getElementById("knowledge-search").value);
+  const items = state.knowledge
+    .filter(item => {
+      const haystack = [
+        item.ingredient,
+        ...(item.aliases || []),
+        item.summary,
+        item.function,
+        item.how_to_use,
+      ].map(normalize).join(" ");
+      return !query || haystack.includes(query);
+    })
+    .sort((a, b) => a.ingredient.localeCompare(b.ingredient, "zh-CN"));
+
+  grid.innerHTML = items.length
+    ? items.map(knowledgeCardMarkup).join("")
+    : '<div class="empty">这里还没有对应的小课堂 📚</div>';
+
+  bindKnowledgeCards(grid);
+}
+
 
 function imageMarkup(recipe) {
   if (!recipe.image) {
@@ -238,14 +309,26 @@ function openRecipe(recipeId) {
   if (!recipe) return;
 
   const ingredients = (recipe.ingredients || []).map(ingredient => {
-    const subs = (ingredient.substitutes || []).map(sub =>
-      '<div class="substitute">↳ 可用 ' + esc(sub.name) + ' 替代 · ' +
-      esc(qualityLabels[sub.quality]) +
-      (sub.note ? ' · ' + esc(sub.note) : '') +
-      '</div>'
-    ).join("");
+    const ingredientKnowledge = findKnowledgeForIngredient(ingredient.name);
+    const ingredientName = ingredientKnowledge
+      ? '<button class="knowledge-inline" data-knowledge-id="' + esc(ingredientKnowledge.id) + '">' +
+        esc(ingredient.name) + ' 📚</button>'
+      : '<strong>' + esc(ingredient.name) + '</strong>';
 
-    return '<div class="ingredient-line"><strong>' + esc(ingredient.name) + '</strong> ' +
+    const subs = (ingredient.substitutes || []).map(sub => {
+      const subKnowledge = findKnowledgeForIngredient(sub.name);
+      const subName = subKnowledge
+        ? '<button class="knowledge-inline" data-knowledge-id="' + esc(subKnowledge.id) + '">' +
+          esc(sub.name) + ' 📚</button>'
+        : esc(sub.name);
+
+      return '<div class="substitute">↳ 可用 ' + subName + ' 替代 · ' +
+        esc(qualityLabels[sub.quality]) +
+        (sub.note ? ' · ' + esc(sub.note) : '') +
+        '</div>';
+    }).join("");
+
+    return '<div class="ingredient-line">' + ingredientName + ' ' +
       esc(ingredient.amount || "") + ' · ' + esc(importanceLabels[ingredient.importance]) +
       subs + '</div>';
   }).join("");
@@ -272,7 +355,73 @@ function openRecipe(recipeId) {
       tips +
     '</div>';
 
-  document.getElementById("recipe-dialog").showModal();
+  const dialog = document.getElementById("recipe-dialog");
+  dialog.showModal();
+
+  dialog.querySelectorAll(".knowledge-inline").forEach(button => {
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      openKnowledge(button.dataset.knowledgeId);
+    });
+  });
+}
+
+function openKnowledge(knowledgeId) {
+  const item = state.knowledge.find(entry => entry.id === knowledgeId);
+  if (!item) return;
+
+  const section = (title, body) => body
+    ? '<section class="knowledge-section"><h3>' + title + '</h3><p>' + esc(body) + '</p></section>'
+    : "";
+
+  const mistakes = (item.mistakes || []).length
+    ? '<section class="knowledge-section"><h3>⚠️ 常见错误</h3><ul>' +
+      item.mistakes.map(value => '<li>' + esc(value) + '</li>').join("") +
+      '</ul></section>'
+    : "";
+
+  const tips = (item.tips || []).length
+    ? '<section class="knowledge-section"><h3>🐯 黄师傅提醒</h3><ul>' +
+      item.tips.map(value => '<li>' + esc(value) + '</li>').join("") +
+      '</ul></section>'
+    : "";
+
+  const aliases = (item.aliases || []).length
+    ? '<div class="knowledge-aliases">也叫：' + item.aliases.map(esc).join(" · ") + '</div>'
+    : "";
+
+  const related = relatedRecipesForIngredient(item.ingredient);
+  const relatedMarkup = related.length
+    ? '<section class="knowledge-section"><h3>🍽️ 用到它的菜</h3><div class="related-recipes">' +
+      related.map(recipe =>
+        '<button class="related-recipe-button" data-recipe-id="' + esc(recipe.id) + '">' +
+        esc(recipe.name) + '</button>'
+      ).join("") +
+      '</div></section>'
+    : "";
+
+  const content = document.getElementById("dialog-content");
+  content.innerHTML =
+    '<div class="dialog-inner knowledge-detail">' +
+      '<div class="knowledge-detail-icon">🥬</div>' +
+      '<h2>' + esc(item.ingredient) + '</h2>' +
+      aliases +
+      (item.summary ? '<p class="knowledge-summary">' + esc(item.summary) + '</p>' : '') +
+      section("它在做饭里是干什么的？", item.function) +
+      section("🍳 怎么使用？", item.how_to_use) +
+      section("🛒 买的时候怎么看？", item.how_to_choose) +
+      section("🧊 怎么保存？", item.storage) +
+      mistakes +
+      tips +
+      relatedMarkup +
+    '</div>';
+
+  const dialog = document.getElementById("recipe-dialog");
+  if (!dialog.open) dialog.showModal();
+
+  dialog.querySelectorAll(".related-recipe-button").forEach(button => {
+    button.addEventListener("click", () => openRecipe(button.dataset.recipeId));
+  });
 }
 
 function renderScenarios() {
@@ -326,8 +475,13 @@ function setupTabs() {
 async function init() {
   setupTabs();
 
-  const response = await fetch("./recipes.json", { cache: "no-store" });
-  state.recipes = response.ok ? await response.json() : [];
+  const [recipeResponse, knowledgeResponse] = await Promise.all([
+    fetch("./recipes.json", { cache: "no-store" }),
+    fetch("./knowledge.json", { cache: "no-store" }),
+  ]);
+
+  state.recipes = recipeResponse.ok ? await recipeResponse.json() : [];
+  state.knowledge = knowledgeResponse.ok ? await knowledgeResponse.json() : [];
 
   const cuisines = [...new Set(state.recipes.map(recipe => recipe.cuisine))].sort();
   const cuisineSelect = document.getElementById("cuisine-filter");
@@ -342,6 +496,7 @@ async function init() {
   document.getElementById("search").addEventListener("input", renderRecipes);
   cuisineSelect.addEventListener("change", renderRecipes);
   document.getElementById("ingredient-search").addEventListener("input", renderIngredientCloud);
+  document.getElementById("knowledge-search").addEventListener("input", renderKnowledge);
 
   document.getElementById("clear-pantry").addEventListener("click", () => {
     state.selectedIngredients.clear();
@@ -359,6 +514,7 @@ async function init() {
   renderIngredientCloud();
   renderMatches();
   renderScenarios();
+  renderKnowledge();
 }
 
 init().catch(error => {
