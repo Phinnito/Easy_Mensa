@@ -75,10 +75,47 @@ if [[ -z "$CODESPACE" || "$CODESPACE" == "null" ]]; then
   exit 1
 fi
 
-echo "🍳 正在等待 ${LABEL} 网页启动..."
+echo "⏳ 正在等待 Codespace 就绪..."
+READY=0
+for attempt in {1..36}; do
+  STATE="$(
+    gh api "user/codespaces/${CODESPACE}" --jq '.state' 2>/dev/null || true
+  )"
 
+  if [[ "$STATE" == "Available" ]]; then
+    READY=1
+    break
+  fi
+
+  if (( attempt % 4 == 0 )); then
+    echo "   当前状态：${STATE:-启动中} ..."
+  fi
+  sleep 5
+done
+
+if [[ "$READY" -ne 1 ]]; then
+  echo "❌ Codespace 等待超过 3 分钟仍未就绪。"
+  echo "下面显示最近的 Codespace 日志："
+  gh codespace logs -c "$CODESPACE" 2>/dev/null | tail -n 35 || true
+  echo
+  echo "你也可以运行：gh codespace code -c ${CODESPACE} -w"
+  exit 1
+fi
+
+echo "🍳 正在启动 Easy_Mensa 网页..."
+
+if ! gh codespace ssh -c "$CODESPACE"   "cd /workspaces/Easy_Mensa && git pull --ff-only >/dev/null 2>&1 || true; bash scripts/start_apps.sh"   >/tmp/easy_mensa_remote_start.log 2>&1; then
+  echo "❌ 云端启动命令失败。错误如下："
+  cat /tmp/easy_mensa_remote_start.log
+  echo
+  echo "Codespace 最近日志："
+  gh codespace logs -c "$CODESPACE" 2>/dev/null | tail -n 35 || true
+  exit 1
+fi
+
+echo "🌐 正在获取 ${LABEL} 地址..."
 URL=""
-for _ in {1..60}; do
+for _ in {1..30}; do
   URL="$(
     gh codespace ports -c "$CODESPACE" \
       --json sourcePort,browseUrl \
@@ -93,7 +130,14 @@ for _ in {1..60}; do
 done
 
 if [[ -z "$URL" || "$URL" == "null" ]]; then
-  URL="https://${CODESPACE}-${PORT}.app.github.dev"
+  echo "❌ Streamlit 已尝试启动，但端口 ${PORT} 没有出现。"
+  echo "请运行下面这句查看云端程序日志："
+  if [[ "$MODE" == "admin" ]]; then
+    echo "gh codespace ssh -c ${CODESPACE} 'cat /tmp/easy_mensa_admin.log'"
+  else
+    echo "gh codespace ssh -c ${CODESPACE} 'cat /tmp/easy_mensa_user.log'"
+  fi
+  exit 1
 fi
 
 echo "✅ ${LABEL} 已启动"
