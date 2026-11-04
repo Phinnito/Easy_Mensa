@@ -1,0 +1,116 @@
+{
+  "id": "recipe-adacf929b0",
+  "name": "家常豆腐",
+  "cuisine": "中餐",
+  "difficulty": 3,
+  "ingredient_complexity": 2,
+  "shareability": 3,
+  "time_minutes": 25,
+  "servings": 2,
+  "scenarios": [
+    "聚会菜谱",
+    "精致一人食",
+    "两个人吃",
+    "认真做饭"
+  ],
+  "image": "images/recipes/recipe-adacf929b0.png",
+  "ingredients": [
+    {
+      "name": "亚超豆腐",
+      "amount": "一盒",
+      "importance": "required",
+      "substitutes": [
+        {
+          "name": "欧洲豆腐",
+          "quality": "close",
+          "note": "因为要煎制所以硬点儿没事儿"
+        }
+      ]
+    },
+    {
+      "name": "牛肉末",
+      "amount": "100g",
+      "importance": "recommended",
+      "substitutes": [
+        {
+          "name": "猪肉沫",
+          "quality": "acceptable",
+          "note": "猪肉会损失一点点香味但是问题不大"
+        }
+      ]
+    },
+    {
+      "name": "土超辣椒",
+      "amount": "两根",
+      "importance": "recommended",
+      "substitutes": [
+        {
+          "name": "青椒",
+          "quality": "acceptable",
+          "note": "没那么辣不带劲"
+        }
+      ]
+    },
+    {
+      "name": "胡萝卜",
+      "amount": "一根",
+      "importance": "optional",
+      "substitutes": []
+    },
+    {
+      "name": "小葱",
+      "amount": "一根",
+      "importance": "recommended",
+      "substitutes": [
+        {
+          "name": "中国大葱",
+          "quality": "acceptable",
+          "note": ""
+        },
+        {
+          "name": "欧洲大葱",
+          "quality": "noticeable_difference",
+          "note": "这是下下策"
+        }
+      ]
+    },
+    {
+      "name": "水淀粉",
+      "amount": "大约一勺淀粉两勺水",
+      "importance": "required",
+      "substitutes": []
+    },
+    {
+      "name": "生抽",
+      "amount": "3勺",
+      "importance": "required",
+      "substitutes": []
+    },
+    {
+      "name": "鸡精",
+      "amount": "适当",
+      "importance": "recommended",
+      "substitutes": []
+    },
+    {
+      "name": "蚝油",
+      "amount": "一dun",
+      "importance": "recommended",
+      "substitutes": []
+    }
+  ],
+  "steps": [
+    "备菜：把豆腐切厚片，如果时间精力允许最好用厨房纸把豆腐表面的水吸干，如果还有额外时间则用淀粉拍一下豆腐（就是粘一点淀粉在表面），会更好吃；把肉馅化冻；把胡萝卜切片；把青椒切段；把葱切成葱末",
+    "用平底锅烧热，然后加适量油到平底锅正好底部都是油没有空的锅区即可，先下一个豆腐，如果油冒泡了则以此下入。此时调成中火。",
+    "大约3-5分钟之后开始晃动平底锅，看豆腐动不动，等豆腐只是因为晃动锅就动了的时候，用筷子反面（如果是很粘锅则配合锅铲），翻动过程中观察表面是否变成金黄，煎制表面金黄之后，在盘子里放厨房纸吸油，把豆腐加出来放在盘子上备用。",
+    "另起锅烧油，把葱段下入炝锅，下入肉馅，不断翻动，把肉馅炒至锅里没水，此时火不需要太大防止糊锅",
+    "加入胡萝卜，翻炒至胡萝卜变软之后，加入2-3吃饭勺的生抽，火可以调大，在生抽冒泡之后下入少许鸡精和一dun蚝油，加大约半碗水，等烧开",
+    "烧开之后搅动，加入水淀粉（见教程），大火手不断搅动锅至锅中液体变浓稠，颜色发深且咕嘟泡泡",
+    "火速下入豆腐和青椒段，调小火，在锅中搅拌大约半分钟即可出锅食用"
+  ],
+  "tips": [
+    "豆腐如果要拍淀粉的话务必先擦干，否则会成黏糊的糊（hù)",
+    "不要一次性把所有豆腐全下下去，如果全下去会互相堆叠，要一个一个往锅里放，最好用手，用筷子也行",
+    "看平底锅质量，如果是不粘锅那么不要急着翻动，如果是很粘锅那记得用铲子把底刮一下的方式来铲起来防止糊锅"
+  ]
+}
